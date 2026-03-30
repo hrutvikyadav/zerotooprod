@@ -4,6 +4,18 @@
 Use cargo watch as file watcher and lld linker for faster inner loop
 
 ```bash
+# Install lld (for ubuntu) ->
+sudo apt-get install lld clang
+touch ./.cargo/config.toml
+```
+
+```toml
+# ./.cargo/config.toml
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=lld"]
+```
+
+```sh
 cargo install cargo-watch
 cargo watch -x check # supports pipelining -> -x test -x run
 ```
