@@ -1,16 +1,14 @@
-use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{App, HttpResponse, HttpServer, Responder, http::StatusCode, web};
 
-async fn greet(req: HttpRequest) -> impl Responder {
-    let name = req.match_info().get("name").unwrap_or("anon");
-    format!("hello {}!\n", &name)
+async fn health_check() -> impl Responder {
+    HttpResponse::new(StatusCode::OK)
 }
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
     HttpServer::new(|| {
         App::new()
-            .route("/", web::get().to(greet))
-            .route("/{name}", web::get().to(greet))
+            .route("/health_check", web::get().to(health_check))
     })
     .bind("127.0.0.1:8050")?
     .run()
