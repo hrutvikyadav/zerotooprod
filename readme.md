@@ -44,3 +44,7 @@ Now fill up the created file with the desired schema change
 - persistence and database migrations
     - setup docker
     - setup `sqlx`
+
+### Connecting to postgres with sqlx
+DATABASE_URL needs to be set for sqlx to know the schema at compile time
+see .env

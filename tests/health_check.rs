@@ -6,7 +6,8 @@
 // You can inspect what code gets generated using
 // `cargo expand --test health_check` (<- name of the test file)
 
-use zerotooprod::startup::run;
+use sqlx::{Connection, PgConnection};
+use zerotooprod::{configuration::get_configuration, startup::run};
 use std::net::TcpListener;
 
 #[tokio::test]
@@ -45,6 +46,11 @@ fn spawn_app() -> String {
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
     let api_base_url: String = spawn_app();
+    let configuration = get_configuration().expect("Failed to read configuration");
+    let con_str = configuration.database.connection_string();
+    let mut pg_connection = PgConnection::connect(&con_str)
+        .await
+        .expect("Failed to connect ot Postgres");
     let client = reqwest::Client::new();
     let subscribe_endpoint = format!("{}/subscribe", api_base_url);
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
@@ -59,6 +65,13 @@ async fn subscribe_returns_200_for_valid_form_data() {
         .expect("Failed to execute request.");
     // Assert
     assert_eq!(200, response.status().as_u16());
+    let saved_data = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&mut pg_connection)
+        .await
+        .expect("Failed to query subscriber");
+
+    assert_eq!(saved_data.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved_data.name, "le guin");
 }
 
 #[tokio::test]
