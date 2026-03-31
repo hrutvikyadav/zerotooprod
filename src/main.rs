@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use zerotooprod::run;
+use zerotooprod::startup::run;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {

@@ -6,6 +6,7 @@
 // You can inspect what code gets generated using
 // `cargo expand --test health_check` (<- name of the test file)
 
+use zerotooprod::startup::run;
 use std::net::TcpListener;
 
 #[tokio::test]
@@ -32,7 +33,7 @@ fn spawn_app() -> String {
     let listener = TcpListener::bind(RANDOM_AV_SOCK)
         .expect("Failed to bind to random port");
     let port = listener.local_addr().unwrap().port();
-    let server = zerotooprod::run(listener).expect("Failed to bind address");
+    let server = run(listener).expect("Failed to bind address");
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let
