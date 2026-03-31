@@ -39,3 +39,52 @@ fn spawn_app() -> String {
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
 }
+
+#[tokio::test]
+async fn subscribe_returns_200_for_valid_form_data() {
+    // Arrange
+    let api_base_url: String = spawn_app();
+    let client = reqwest::Client::new();
+    let subscribe_endpoint = format!("{}/subscribe", api_base_url);
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+
+    // Act
+    let response = client
+        .post(subscribe_endpoint)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    // Assert
+    assert_eq!(200, response.status().as_u16());
+}
+
+#[tokio::test]
+async fn subscribe_returns_400_for_missing_form_data() {
+    // Arrange
+    let api_base_url: String = spawn_app();
+    let client = reqwest::Client::new();
+    let subscribe_endpoint = format!("{}/subscribe", api_base_url);
+    let test_cases = vec![
+        ("name=le%20guin", "missing the email"),
+        ("email=ursula_le_guin%40gmail.com", "missing the name"),
+        ("", "missing both name and email")
+    ];
+
+    for (invalid_body, reason) in test_cases {
+        // Act
+        let response = client
+            .post(&subscribe_endpoint)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+        // Assert
+        assert_eq!(400, response.status().as_u16(),
+            "expected /subscribe to fail with 400 status because form was {}.",
+            reason
+        );
+    }
+}
