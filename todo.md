@@ -7,4 +7,5 @@
     - [x] integration test for health_check
         - [x] resort to tokio runtime for testing while using actix runtime for binary (as in latest actix docs)
         - [x] use reqwest for black box
-        - [ ] extract API_BASE into env variable??
+        - [x] extract API_BASE into env variable??
+            - even better -> tests should run their bg tasks on a **random avaliable port**
