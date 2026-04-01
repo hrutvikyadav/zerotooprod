@@ -6,18 +6,24 @@
 // You can inspect what code gets generated using
 // `cargo expand --test health_check` (<- name of the test file)
 
-use sqlx::{Connection, PgConnection};
-use zerotooprod::{configuration::get_configuration, startup::run};
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use uuid::Uuid;
+use zerotooprod::{configuration::{DatabaseSettings, get_configuration}, startup::run};
 use std::net::TcpListener;
+
+pub struct TestApp {
+    api_base_url: String,
+    db_pool: PgPool
+}
 
 #[tokio::test]
 async fn health_check_works() {
     // Arrange
-    let api_base_url: String = spawn_app();
+    let test_app = spawn_app().await;
     // We need to bring in `reqwest`
     // to perform HTTP requests against our application.
     let client = reqwest::Client::new();
-    let health_check_endpoint = format!("{}/health_check", api_base_url);
+    let health_check_endpoint = format!("{}/health_check", test_app.api_base_url);
     // Act
     let response = client
         .get(health_check_endpoint)
@@ -29,30 +35,53 @@ async fn health_check_works() {
 }
 
 // Launch our application in the background ~somehow~
-fn spawn_app() -> String {
+async fn spawn_app() -> TestApp {
     const RANDOM_AV_SOCK: &str = "127.0.0.1:0";
     let listener = TcpListener::bind(RANDOM_AV_SOCK)
         .expect("Failed to bind to random port");
     let port = listener.local_addr().unwrap().port();
-    let server = run(listener).expect("Failed to bind address");
+    let api_base_url = format!("http://127.0.0.1:{}", port);
+    let mut configuration = get_configuration().expect("Failed to read configuration.");
+    configuration.database.database_name = Uuid::new_v4().to_string();
+    let connection_pool = configure_database(&configuration.database).await;
+
+    let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let
     let _ = tokio::spawn(server);
-    format!("http://127.0.0.1:{}", port)
+
+    TestApp {
+        api_base_url: api_base_url,
+        db_pool: connection_pool,
+    }
+}
+
+pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    // Create database
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
+    // Migrate database
+    let connection_pool = PgPool::connect(&config.connection_string())
+        .await
+        .expect("Failed to connect to Postgres.");
+    sqlx::migrate!("./migrations") .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
+    connection_pool
 }
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data() {
     // Arrange
-    let api_base_url: String = spawn_app();
-    let configuration = get_configuration().expect("Failed to read configuration");
-    let con_str = configuration.database.connection_string();
-    let mut pg_connection = PgConnection::connect(&con_str)
-        .await
-        .expect("Failed to connect ot Postgres");
+    let test_app = spawn_app().await;
     let client = reqwest::Client::new();
-    let subscribe_endpoint = format!("{}/subscribe", api_base_url);
+    let subscribe_endpoint = format!("{}/subscribe", test_app.api_base_url);
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
     // Act
@@ -66,7 +95,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
     // Assert
     assert_eq!(200, response.status().as_u16());
     let saved_data = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&mut pg_connection)
+        .fetch_one(&test_app.db_pool)
         .await
         .expect("Failed to query subscriber");
 
@@ -77,9 +106,9 @@ async fn subscribe_returns_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_400_for_missing_form_data() {
     // Arrange
-    let api_base_url: String = spawn_app();
+    let test_app = spawn_app().await;
     let client = reqwest::Client::new();
-    let subscribe_endpoint = format!("{}/subscribe", api_base_url);
+    let subscribe_endpoint = format!("{}/subscribe", test_app.api_base_url);
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
