@@ -1,8 +1,8 @@
 use std::net::TcpListener;
 
 use sqlx::PgPool;
-use zerotooprod::startup::run;
 use zerotooprod::configuration::get_configuration;
+use zerotooprod::startup::run;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -11,8 +11,7 @@ async fn main() -> Result<(), std::io::Error> {
         .await
         .expect("Failed to connect to Postgres.");
     let app_base = format!("127.0.0.1:{}", config.application_port);
-    let listener = TcpListener::bind(&app_base)
-        .expect("Failed to bind to port");
+    let listener = TcpListener::bind(&app_base).expect("Failed to bind to port");
     println!("App running on {}", &app_base);
     run(listener, connection_pool)?.await
 }

@@ -1,4 +1,3 @@
-
 //! tests/health_check.rs
 // `tokio::test` is the testing equivalent of `tokio::main`.
 // It also spares you from having to specify the `#[test]` attribute.
@@ -7,13 +6,16 @@
 // `cargo expand --test health_check` (<- name of the test file)
 
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use uuid::Uuid;
-use zerotooprod::{configuration::{DatabaseSettings, get_configuration}, startup::run};
 use std::net::TcpListener;
+use uuid::Uuid;
+use zerotooprod::{
+    configuration::{DatabaseSettings, get_configuration},
+    startup::run,
+};
 
 pub struct TestApp {
     api_base_url: String,
-    db_pool: PgPool
+    db_pool: PgPool,
 }
 
 #[tokio::test]
@@ -31,14 +33,14 @@ async fn health_check_works() {
         .await
         .expect("Failed to execute request.");
     // Assert
-    assert!(response.status().is_success()); assert_eq!(Some(0), response.content_length());
+    assert!(response.status().is_success());
+    assert_eq!(Some(0), response.content_length());
 }
 
 // Launch our application in the background ~somehow~
 async fn spawn_app() -> TestApp {
     const RANDOM_AV_SOCK: &str = "127.0.0.1:0";
-    let listener = TcpListener::bind(RANDOM_AV_SOCK)
-        .expect("Failed to bind to random port");
+    let listener = TcpListener::bind(RANDOM_AV_SOCK).expect("Failed to bind to random port");
     let port = listener.local_addr().unwrap().port();
     let api_base_url = format!("http://127.0.0.1:{}", port);
     let mut configuration = get_configuration().expect("Failed to read configuration.");
@@ -70,7 +72,8 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     let connection_pool = PgPool::connect(&config.connection_string())
         .await
         .expect("Failed to connect to Postgres.");
-    sqlx::migrate!("./migrations") .run(&connection_pool)
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
         .await
         .expect("Failed to migrate the database");
     connection_pool
@@ -112,7 +115,7 @@ async fn subscribe_returns_400_for_missing_form_data() {
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
-        ("", "missing both name and email")
+        ("", "missing both name and email"),
     ];
 
     for (invalid_body, reason) in test_cases {
@@ -125,7 +128,9 @@ async fn subscribe_returns_400_for_missing_form_data() {
             .await
             .expect("Failed to execute request.");
         // Assert
-        assert_eq!(400, response.status().as_u16(),
+        assert_eq!(
+            400,
+            response.status().as_u16(),
             "expected /subscribe to fail with 400 status because form was {}.",
             reason
         );

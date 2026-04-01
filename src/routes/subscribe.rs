@@ -13,16 +13,20 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
         r#" INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
         "#,
-        Uuid::new_v4(), form.email, form.name, Utc::now()
+        Uuid::new_v4(),
+        form.email,
+        form.name,
+        Utc::now()
     )
     // We use `get_ref` to get an immutable reference to the `PgPool` // wrapped by `web::Data`.
     // Using the pool as a drop-in replacement
     .execute(pool.get_ref())
-    .await {
+    .await
+    {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
-            println!("Failed to execute query: {}", e); HttpResponse::InternalServerError().finish()
-        },
+            println!("Failed to execute query: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
-
