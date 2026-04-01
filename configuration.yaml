@@ -1,7 +1,7 @@
 application_port: 8050
 database:
   host: "127.0.0.1"
-  port: 5442
+  port: 5432
   username: "postgres"
   password: "password"
   database_name: "newsletter"
