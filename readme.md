@@ -83,7 +83,7 @@ prefixes determine how the data is displayed
 
 > [!WARNING]
 > Span needs to be `enter`ed explicitly BUT we cannot just simply enter a guard in an async function.
-Till the guard is not dropped, downstream spans, logs will be registered as children of the entered span.
+Till the guard is not dropped, **downstream** spans, logs will be registered as children of the entered span.
 We can customize the Drop implementation and run special stuff like exiting a span. See gI for `Entered` from tracing.
 
 For multiple futures, we need to enter and exit the spans when the future is polled and awaited. We can use `Instrument` for this i.e. to make the span follow the futures lifecycle so as to not mix them up
