@@ -19,6 +19,7 @@ uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
 # this implementation of Log trait logs to the terminal
 env_logger = "0.9"
+log = "0.4"
 
 # Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]
