@@ -11,7 +11,12 @@ pub struct FormData {
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     // GDPR!!!
     let request_id = Uuid::new_v4();
-    log::info!(
+    // Spans, like logs, have an associated level // `info_span` creates a span at the info-level
+    let request_span = tracing::info_span!( "Adding a new subscriber.", %request_id, subscriber_email = %form.email, subscriber_name = %form.name );
+    // WARN: dont use enter in async
+    let _request_span_guard = request_span.enter();
+
+    tracing::info!(
         "request_id {} - Saving new subscriber details ({}, {}) in the database",
         request_id,
         form.email,
@@ -32,7 +37,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
     .await
     {
         Ok(_) => {
-            log::info!(
+            tracing::info!(
                 "request_id {} - Subscriber details saved to database",
                 request_id
             );
@@ -41,7 +46,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
         Err(e) => {
             // note the Debug fmt specifier to capture rich information
             // which is stripped off by Display
-            log::error!(
+            tracing::error!(
                 "request_id {} - Failed to execute query: {:?}",
                 request_id,
                 e
@@ -49,4 +54,7 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
             HttpResponse::InternalServerError().finish()
         }
     }
+    // `_request_span_guard` is dropped at the end of `subscribe` // That's when we "exit" the span
+    // on the other hand when request_span itself is dropped, we "close" the span
+    // We can enter and exit multiple times and closing is final
 }

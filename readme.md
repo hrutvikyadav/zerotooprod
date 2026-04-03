@@ -64,3 +64,26 @@ Lets see how actix web can emitt info
 > We *need to decide what to do with the emitted information*. i.e. think shell redirect or pipeing or giving as input to another program.
 > This is where the facade pattern comes in.. This kind of logging is a complex system where we get a single simplified interface (in this case - `set_logger` where we pass in a simple dependency -> An implementation of the `Log` trait.
 > In this way depending on what we want to do with the emitted information, we can implement the trait for our own types. It will make easier to swap in the logger for example in tests, so that we can write log output to some entity which we can inspect and assert on. Whereas in main we just print to the terminal for example
+
+Now we are logging request_id for tracing concurrent requests but there is an issue. our app as well as libs like actix will emitt data via log..
+request_id is only added to our application code. To have it appear in other places we need to add code to accomodate this to the upstream libs as well as any downstream helpers we end up calling.
+This is bad and we will migrate to a better suited solution next
+
+### Replacing log with tracing
+Firstly it can be used as drop in replacement for log i.e. replace `log` macros with `tracing`.
+Next up we can use spans from tracing.
+> Span is the key here -> it better captures our http requests which we intend to trace without having to manually pass around request_id upstream or downstream.
+Instead of having to pass around request_id and its associated data in a go style context, we create a span of a loglevel with macro,
+where instead of interpolating strings, we provide data as key value pairs.
+prefixes determine how the data is displayed 
+> Display 
+> - use %
+> Debug
+> - use ?
+
+> [!WARNING]
+> Span needs to be `enter`ed explicitly BUT we cannot just simply enter a guard in an async function.
+Till the guard is not dropped, downstream spans, logs will be registered as children of the entered span.
+We can customize the Drop implementation and run special stuff like exiting a span. See gI for `Entered` from tracing.
+
+For multiple futures, we need to enter and exit the spans when the future is polled and awaited. We can use `Instrument` for this i.e. to make the span follow the futures lifecycle so as to not mix them up
