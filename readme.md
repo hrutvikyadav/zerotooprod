@@ -48,3 +48,19 @@ Now fill up the created file with the desired schema change
 ### Connecting to postgres with sqlx
 DATABASE_URL needs to be set for sqlx to know the schema at compile time
 see .env
+
+## Misc
+
+Instrumenting X = collecting data from X ~or emitting data in case we are the concerned dev~
+> Instrumenting bats
+> Instrumenting an application
+
+As a start We can use log crate to instrument our application
+The choice of what to emitt about a functions operation is local to that function.
+Which means other peoples code might also have a way to emitt usefule information.
+Lets see how actix web can emitt info
+> We can use the logger middleware
+> But there is a piece missing
+> We *need to decide what to do with the emitted information*. i.e. think shell redirect or pipeing or giving as input to another program.
+> This is where the facade pattern comes in.. This kind of logging is a complex system where we get a single simplified interface (in this case - `set_logger` where we pass in a simple dependency -> An implementation of the `Log` trait.
+> In this way depending on what we want to do with the emitted information, we can implement the trait for our own types. It will make easier to swap in the logger for example in tests, so that we can write log output to some entity which we can inspect and assert on. Whereas in main we just print to the terminal for example
