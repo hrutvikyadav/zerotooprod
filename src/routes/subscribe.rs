@@ -10,8 +10,10 @@ pub struct FormData {
 }
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     // GDPR!!!
+    let request_id = Uuid::new_v4();
     log::info!(
-        "Saving new subscriber details ({}, {}) in the database",
+        "request_id {} - Saving new subscriber details ({}, {}) in the database",
+        request_id,
         form.email,
         form.name
     );
@@ -30,13 +32,20 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
     .await
     {
         Ok(_) => {
-            log::info!("Subscriber details saved to database");
+            log::info!(
+                "request_id {} - Subscriber details saved to database",
+                request_id
+            );
             HttpResponse::Ok().finish()
         }
         Err(e) => {
             // note the Debug fmt specifier to capture rich information
             // which is stripped off by Display
-            log::error!("Failed to execute query: {:?}", e);
+            log::error!(
+                "request_id {} - Failed to execute query: {:?}",
+                request_id,
+                e
+            );
             HttpResponse::InternalServerError().finish()
         }
     }
