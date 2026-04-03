@@ -87,3 +87,7 @@ Till the guard is not dropped, **downstream** spans, logs will be registered as 
 We can customize the Drop implementation and run special stuff like exiting a span. See gI for `Entered` from tracing.
 
 For multiple futures, we need to enter and exit the spans when the future is polled and awaited. We can use `Instrument` for this i.e. to make the span follow the futures lifecycle so as to not mix them up
+
+Now we will use tracings `Subscribe` facade instead of `Log`s set_logger to work with spans instead of logs.
+for that we use tracing-subscriber which brings into the picture `Layer` which can be used for pipelining.
+Multiple layers are combined to achieve new results/capabilities.

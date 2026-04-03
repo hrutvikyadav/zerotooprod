@@ -4,11 +4,26 @@ use env_logger::Env;
 use sqlx::PgPool;
 use zerotooprod::configuration::get_configuration;
 use zerotooprod::startup::run;
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
-    // init calls set_logger implicitly
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let formatting_layer = BunyanFormattingLayer::new(
+        "zerotooprod".into(),
+        std::io::stdout
+    );
+    let subscriber = Registry::default()
+		.with(env_filter)
+		.with(JsonStorageLayer)
+		.with(formatting_layer);
+
+    // `set_global_default` can be used by applications to specify
+    //  what subscriber should be used to process spans.
+    set_global_default(subscriber).expect("Failed to set subscriber");
 
     let config = get_configuration().expect("Failed to load configuration");
     let connection_pool = PgPool::connect(&config.database.connection_string())
