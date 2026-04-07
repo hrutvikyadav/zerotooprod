@@ -1,6 +1,5 @@
 use std::net::TcpListener;
 
-use env_logger::Env;
 use sqlx::PgPool;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
